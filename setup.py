@@ -7,8 +7,13 @@ setuptools.setup(
     python_requires=">=3.10",
     install_requires=[
         "numpy",
-        "pandas"
+        "pandas",
+        "yfinance",
+        "scipy",
+        "fredapi",
+        "matplotlib"
     ],
     entry_points={'console_scripts':
-                  ['script = main:main']}
+                  ['script = main:main',
+                   'example = example:main']}
 )
