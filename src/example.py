@@ -18,9 +18,23 @@ from PyQt5.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QTextEdit,
+    QDateEdit,
 )
+from PyQt5.QtCore import QDate
 
-from calculate import *
+# Importowanie funkcji z calculate.py
+from calculate import (
+    standard_deviation,
+    expected_return,
+    sharpe_ratio,
+    neg_sharpe_ratio,
+    download_close_prices,
+    get_risk_free_rate,
+    plot_optimal_weights,
+    calculate_maximum_return,
+    optimize_portfolio,
+    create_figure,
+)
 
 
 class CryptoSelectionDialog(QDialog):
@@ -78,10 +92,28 @@ class CryptoPortfolioOptimizer(QWidget):
         self.upper_entries = []
         self.results_text = QTextEdit(self)
         self.results_text.setReadOnly(True)
+        self.canvas = None  # Placeholder for the matplotlib canvas
         self.initUI()
 
     def initUI(self):
         layout = QVBoxLayout()
+
+        # Ustawienia daty początkowej i końcowej
+        date_layout = QHBoxLayout()
+        start_date_label = QLabel("Data początkowa:")
+        self.start_date_edit = QDateEdit(calendarPopup=True)
+        self.start_date_edit.setDate(QDate.currentDate().addYears(-6))
+        date_layout.addWidget(start_date_label)
+        date_layout.addWidget(self.start_date_edit)
+
+        end_date_label = QLabel("Data końcowa:")
+        self.end_date_edit = QDateEdit(calendarPopup=True)
+        self.end_date_edit.setDate(QDate.currentDate().addYears(-1))
+        date_layout.addWidget(end_date_label)
+        date_layout.addWidget(self.end_date_edit)
+
+        layout.addLayout(date_layout)
+
         tickers_layout = QHBoxLayout()
         tickers_label = QLabel("Tickery:")
         tickers_layout.addWidget(tickers_label)
@@ -136,8 +168,8 @@ class CryptoPortfolioOptimizer(QWidget):
             for lower_entry, upper_entry in zip(self.lower_entries, self.upper_entries)
             if lower_entry.text() and upper_entry.text()
         ]
-        end_date = datetime.today() - timedelta(days=365)
-        start_date = end_date - timedelta(days=5 * 365)
+        start_date = self.start_date_edit.date().toPyDate()
+        end_date = self.end_date_edit.date().toPyDate()
         optimal_weights = optimize_portfolio(tickers, bounds, start_date, end_date)
         optimal_weights_msg = "\n".join([f"{ticker}: {weight:.4f}" for ticker, weight in zip(tickers, optimal_weights)])
         self.results_text.setText(f"Optymalne wagi:\n{optimal_weights_msg}")
@@ -150,18 +182,19 @@ class CryptoPortfolioOptimizer(QWidget):
         for ticker_entry in self.ticker_entries:
             if ticker_entry.text():
                 tickers.extend(ticker_entry.text().split(", "))
-        start_date = datetime.today() - timedelta(days=365)
-        end_date = datetime.today()
+        start_date = self.start_date_edit.date().toPyDate()
+        end_date = self.end_date_edit.date().toPyDate()
         max_returns = calculate_maximum_return(tickers, start_date, end_date)
         max_return_msg = "\n".join([f"{ticker}: {max_return:.4f}" for ticker, max_return in max_returns])
         self.results_text.setText(f"Maksymalne skumulowane zwroty:\n{max_return_msg}")
 
     def display_plot(self, fig):
-        canvas = FigureCanvas(fig)
-        canvas.draw()
-        plot_layout = QVBoxLayout()
-        plot_layout.addWidget(canvas)
-        self.setLayout(plot_layout)
+        if self.canvas is not None:
+            self.layout().removeWidget(self.canvas)
+            self.canvas.close()
+
+        self.canvas = FigureCanvas(fig)
+        self.layout().addWidget(self.canvas)
 
 
 if __name__ == "__main__":
