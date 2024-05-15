@@ -11,7 +11,8 @@ setuptools.setup(
         "yfinance",
         "scipy",
         "fredapi",
-        "matplotlib"
+        "matplotlib",
+        "PyQt5"
     ],
     entry_points={'console_scripts':
                   ['script = main:main',
