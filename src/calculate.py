@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
+from pypfopt import EfficientFrontier, risk_models, expected_returns, BlackLittermanModel, HRPOpt, black_litterman
 
 
 # Oblicza odchylenie standardowe portfela
@@ -84,7 +85,6 @@ def optimize_portfolio(tickers, bounds, start_date, end_date):
     return optimized_results.x
 
 
-# Funkcja tworząca wykres
 def create_figure(tickers, optimal_weights):
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.bar(tickers, optimal_weights)
@@ -92,3 +92,47 @@ def create_figure(tickers, optimal_weights):
     ax.set_ylabel("Optymalne wagi")
     ax.set_title("Optymalne wagi portfela")
     return fig
+
+
+# Helper function - market cap
+def fetch_market_caps(tickers):
+    market_caps = []
+    for ticker in tickers:
+        stock = yf.Ticker(ticker)
+        market_cap = stock.info.get('marketCap', 0)
+        market_caps.append(market_cap)
+    return market_caps
+
+
+def optimize_black_litterman(tickers, views, start_date, end_date):
+
+    adj_close_df = download_close_prices(tickers, start_date, end_date)
+
+    S = risk_models.sample_cov(adj_close_df)
+
+    market_caps = fetch_market_caps(tickers)
+    market_caps_series = pd.Series(market_caps, index=tickers)
+
+    delta = black_litterman.market_implied_risk_aversion(adj_close_df.mean())
+    prior = black_litterman.market_implied_prior_returns(market_caps_series, delta, S)
+
+    Q, P = views["Q"], views["P"]
+
+    bl = BlackLittermanModel(S, pi=prior, Q=Q, P=P)
+
+    rets = bl.bl_returns()
+
+    ef = EfficientFrontier(rets, S)
+    ef.max_sharpe()
+    cleaned_weights = ef.clean_weights()
+
+    return cleaned_weights
+
+def optimize_risk_parity(tickers, start_date, end_date):
+    adj_close_df = download_close_prices(tickers, start_date, end_date)
+    log_returns = np.log(adj_close_df / adj_close_df.shift(1)).dropna()
+    cov_matrix = risk_models.sample_cov(log_returns)
+    hrp = HRPOpt(cov_matrix)
+    optimal_weights = hrp.optimize()
+
+    return optimal_weights

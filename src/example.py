@@ -34,6 +34,8 @@ from calculate import (
     calculate_maximum_return,
     optimize_portfolio,
     create_figure,
+    optimize_black_litterman,
+    optimize_risk_parity,
 )
 
 
@@ -143,6 +145,14 @@ class CryptoPortfolioOptimizer(QWidget):
         optimize_button.clicked.connect(self.optimize_portfolio)
         layout.addWidget(optimize_button)
 
+        bl_button = QPushButton("Optymalizuj Black-Litterman", self)
+        bl_button.clicked.connect(self.optimize_black_litterman)
+        layout.addWidget(bl_button)
+
+        rp_button = QPushButton("Optymalizuj Risk Parity", self)
+        rp_button.clicked.connect(self.optimize_risk_parity)
+        layout.addWidget(rp_button)
+
         calculate_max_button = QPushButton("Oblicz maksymalne zwroty", self)
         calculate_max_button.clicked.connect(self.calculate_maximum_return)
         layout.addWidget(calculate_max_button)
@@ -175,6 +185,44 @@ class CryptoPortfolioOptimizer(QWidget):
         self.results_text.setText(f"Optymalne wagi:\n{optimal_weights_msg}")
 
         fig = create_figure(tickers, optimal_weights)
+        self.display_plot(fig)
+
+    def optimize_black_litterman(self):
+        tickers = [ticker_entry.text().strip() for ticker_entry in self.ticker_entries if ticker_entry.text().strip()]
+        start_date = self.start_date_edit.date().toPyDate()
+        end_date = self.end_date_edit.date().toPyDate()
+
+        if not tickers:
+            self.results_text.setText("No tickers selected.")
+            return
+
+        try:
+            views = {
+                "Q": np.array([0.015, 0.02, 0.03, 0.022, 0.018]).reshape(-1, 1), # do zmian
+                #"Q": np.array([0.01] * len(tickers)).reshape(-1, 1),
+                "P": np.eye(len(tickers))
+            }
+            optimal_weights = optimize_black_litterman(tickers, views, start_date, end_date)
+            optimal_weights_msg = "\n".join([f"{ticker}: {weight:.4f}" for ticker, weight in optimal_weights.items()])
+            self.results_text.setText(f"Optimal Weights (Black-Litterman):\n{optimal_weights_msg}")
+
+            fig = create_figure(tickers, list(optimal_weights.values()))
+            self.display_plot(fig)
+        except Exception as e:
+            self.results_text.setText(f"Error: {e}")
+
+    def optimize_risk_parity(self):
+        tickers = []
+        for ticker_entry in self.ticker_entries:
+            if ticker_entry.text():
+                tickers.extend(ticker_entry.text().split(", "))
+        start_date = self.start_date_edit.date().toPyDate()
+        end_date = self.end_date_edit.date().toPyDate()
+        optimal_weights = optimize_risk_parity(tickers, start_date, end_date)
+        optimal_weights_msg = "\n".join([f"{ticker}: {weight:.4f}" for ticker, weight in optimal_weights.items()])
+        self.results_text.setText(f"Optymalne wagi (Risk Parity):\n{optimal_weights_msg}")
+
+        fig = create_figure(tickers, list(optimal_weights.values()))
         self.display_plot(fig)
 
     def calculate_maximum_return(self):
