@@ -1,9 +1,5 @@
 import sys
-import yfinance as yf
-import pandas as pd
-from datetime import datetime, timedelta
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtWidgets import (
     QApplication,
@@ -173,11 +169,21 @@ class CryptoPortfolioOptimizer(QWidget):
         for ticker_entry in self.ticker_entries:
             if ticker_entry.text():
                 tickers.extend(ticker_entry.text().split(", "))
-        bounds = [
-            (float(lower_entry.text()), float(upper_entry.text()))
-            for lower_entry, upper_entry in zip(self.lower_entries, self.upper_entries)
-            if lower_entry.text() and upper_entry.text()
-        ]
+        bounds = []
+
+        for lower_entry, upper_entry, ticker_entry in zip(self.lower_entries, self.upper_entries, self.ticker_entries):
+            if lower_entry.text() and upper_entry.text() and lower_entry.text() < 0.0 and lower_entry.text() <= upper_entry.text():
+                bounds.append((float(lower_entry.text()), float(upper_entry.text())))
+            elif lower_entry.text():
+                bounds.append((float(lower_entry.text()), 1.0))
+            elif upper_entry.text():
+                bounds.append((0.0, float(upper_entry.text())))
+            elif ticker_entry.text():
+                bounds.append((0.0, 1.0))
+
+        if len(bounds) == 0:
+            bounds = [(0.0, 1.0) for _ in tickers]
+
         start_date = self.start_date_edit.date().toPyDate()
         end_date = self.end_date_edit.date().toPyDate()
         optimal_weights = optimize_portfolio(tickers, bounds, start_date, end_date)

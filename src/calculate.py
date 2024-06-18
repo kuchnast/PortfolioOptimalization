@@ -1,7 +1,5 @@
-import sys
 import yfinance as yf
 import pandas as pd
-from datetime import datetime, timedelta
 import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
