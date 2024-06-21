@@ -12,7 +12,8 @@ setuptools.setup(
         "scipy",
         "fredapi",
         "matplotlib",
-        "PyQt5"
+        "PyQt5",
+        "pyportfolioopt"
     ],
     entry_points={'console_scripts':
                   ['script = main:main',
