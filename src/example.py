@@ -141,6 +141,15 @@ class CryptoPortfolioOptimizer(QWidget):
             bounds_layout.addWidget(upper_entry)
         layout.addLayout(bounds_layout)
 
+        # macierz Q - black-litterman
+        q_layout = QHBoxLayout()
+        q_label = QLabel("wagi macierzy Q Black-Litterman'a:")
+        q_layout.addWidget(q_label)
+        self.q_entries = [QLineEdit(self) for _ in range(5)]
+        for q_entry in self.q_entries:
+            q_layout.addWidget(q_entry)
+        layout.addLayout(q_layout)
+
         optimize_button = QPushButton("Optymalizuj portfel", self)
         optimize_button.clicked.connect(self.optimize_portfolio)
         layout.addWidget(optimize_button)
@@ -197,9 +206,12 @@ class CryptoPortfolioOptimizer(QWidget):
             return
 
         try:
+            q_matrix = [float(q_entry.text()) if q_entry.text().strip() else 0.01 for q_entry in self.q_entries]
+
             views = {
-                "Q": np.array([0.015, 0.02, 0.03, 0.022, 0.018]).reshape(-1, 1), # do zmian
+                #"Q": np.array([0.015, 0.02, 0.03, 0.022, 0.018]).reshape(-1, 1), # do zmian
                 #"Q": np.array([0.01] * len(tickers)).reshape(-1, 1),
+                "Q": np.array(q_matrix).reshape(-1, 1),
                 "P": np.eye(len(tickers))
             }
             optimal_weights = optimize_black_litterman(tickers, views, start_date, end_date)
